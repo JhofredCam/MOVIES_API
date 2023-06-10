@@ -6,7 +6,7 @@ import ast
 
 app = FastAPI()
 
-movies = pd.read_csv("Tables\movies.csv")
+movies = pd.read_csv("movies.csv")
 
 @app.get("/cantidad_filmaciones_mes/{month}")
 def cantidad_filmaciones_mes(month:str) -> str:
