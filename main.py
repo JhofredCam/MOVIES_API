@@ -9,8 +9,9 @@ app = FastAPI()
 movies = pd.read_csv("movies.csv")
 recommendations = pd.read_csv('recommendations.csv')
 
+
 @app.get("/cantidad_filmaciones_mes/{month}")
-def cantidad_filmaciones_mes(month:str) -> str:
+def cantidad_filmaciones_mes(month:str) -> dict:
     """
     Devuelve la cantidad de películas estrenadas en un mes específico.
 
@@ -18,7 +19,7 @@ def cantidad_filmaciones_mes(month:str) -> str:
     - month (str): El mes para el cual se desea obtener la cantidad de películas estrenadas.
 
     Retorna:
-    Una cadena de texto que indica la cantidad de películas estrenadas en el mes especificado.
+    Un diccionario que indica la cantidad de películas estrenadas en el mes especificado.
 
     """
     
@@ -42,12 +43,11 @@ def cantidad_filmaciones_mes(month:str) -> str:
     # Obtener el recuento de películas estrenadas en el mes proporcionado
     num_movies = movies['release_month'].value_counts().loc[months[month]]
 
-    return f"{num_movies} cantidad de películas fueron estrenadas en el mes de {month}"
-
+    return {'mes':month,'cantidad':int(num_movies)}
 
 
 @app.get("/cantidad_filmaciones_dia/{day}")
-def cantidad_filmaciones_dia(day:str) -> str:
+def cantidad_filmaciones_dia(day:str) -> dict:
     """
     Devuelve la cantidad de películas estrenadas en un día específico.
 
@@ -55,7 +55,7 @@ def cantidad_filmaciones_dia(day:str) -> str:
     - day (str): El día para el cual se desea obtener la cantidad de películas estrenadas.
 
     Retorna:
-    Una cadena de texto que indica la cantidad de películas estrenadas en el día especificado.
+    Un diccionario que indica la cantidad de películas estrenadas en el día especificado.
 
     """
 
@@ -98,12 +98,11 @@ def cantidad_filmaciones_dia(day:str) -> str:
     # Obtener el recuento de películas estrenadas en el dia proporcionado
     num_movies = movies['release_day'].value_counts().loc[days[day]]
 
-    return f"{num_movies} cantidad de películas fueron estrenadas en el día {days[day]} ({day})"
-
+    return {'dia':day,'cantidad':int(num_movies)}
 
 
 @app.get("/score_titulo/{title}")
-def score_titulo(title: str) -> str:
+def score_titulo(title: str) -> dict:
     """
     Devuelve la información del título, año de estreno y puntaje de una película específica.
 
@@ -111,21 +110,22 @@ def score_titulo(title: str) -> str:
     - title (str): El título de la película para la cual se desea obtener la información.
 
     Retorna:
-    Una cadena de texto que muestra el título de la película, su año de estreno y su puntaje/popularidad.
+    Un diccionario que muestra el título de la película, su año de estreno y su puntaje/popularidad.
 
     """
+
+    title = title.title()
+
     # Obtener la película con el título proporcionado
     movie = movies[movies['title'] == title].iloc[0, :]
 
     # Seleccionar las columnas relevantes: título, año de estreno y puntaje
-    movie = movie[['title', 'release_year', 'vote_average']]
+    movie = movie[['title', 'release_year', 'popularity','vote_average']]
 
-    return f"La película {movie['title']} fue estrenada en el año {movie['release_year']} con un score/popularidad de {movie['vote_average']}"
-
-
+    return {'titulo':movie['title'], 'anio':int(movie['release_year']), 'popularidad':round(movie['popularity'],2)}
 
 @app.get("/votos_titulo/{title}")
-def votos_titulo(title: str) -> str:
+def votos_titulo(title: str):
     """
     Devuelve información sobre el número de votos y el puntaje promedio de una película específica.
 
@@ -133,22 +133,27 @@ def votos_titulo(title: str) -> str:
     - title (str): El título de la película para la cual se desea obtener la información.
 
     Retorna:
-    Una cadena de texto que muestra el título de la película, su año de estreno, el número de votos y el puntaje promedio.
+    Un diccionario que muestra el título de la película, su año de estreno, el número de votos y el puntaje promedio.
+    O una cadena de texto indicando que no cumple la condición de 2000 valoraciones o más.
 
     """
+
+    title = title.title()
+
+
     # Obtener la película con el título proporcionado
     movie = movies[movies['title'] == title].iloc[0, :]
 
     # Verificar si la película tiene 2000 votos o más
     if movie['vote_count'] >= 2000:
-        return f"La película {movie['title']} fue estrenada en el año {movie['release_year']}. La misma cuenta con un total de {int(movie['vote_count'])} valoraciones, con un score promedio de {movie['vote_average']}"
-    
+        return {'titulo':movie['title'], 'anio':int(movie['release_year']), 'voto_total':int(movie['vote_count']), 'voto_promedio':round(movie['vote_average'],2)}    
     else:
         # Devolver un mensaje indicando que la película no cumple con el criterio de votos mínimos
         return "La película no contiene 2000 valoraciones o más, por lo que no se devuelve ningún valor"
     
+
 @app.get("/get_actor/{actor}")
-def get_actor(actor: str) -> str:
+def get_actor(actor: str) -> dict:
     """
     Devuelve información sobre las filmaciones en las que un actor específico ha participado.
 
@@ -156,7 +161,7 @@ def get_actor(actor: str) -> str:
     - actor (str): El nombre del actor para el cual se desea obtener la información.
 
     Retorna:
-    Una cadena de texto que muestra el nombre del actor, el número de filmaciones en las que ha participado,
+    Un diccionario que muestra el nombre del actor, el número de filmaciones en las que ha participado,
     el retorno total obtenido y el retorno promedio por filmación.
 
     """
@@ -176,7 +181,7 @@ def get_actor(actor: str) -> str:
         else:
             return None
         
-    def get_actor_name(cast: str, name: str) -> bool:
+    def get_actor_name(cast: str, name: str) -> dict:
         """
         Verifica si el nombre de un actor específico se encuentra en el elenco de una película.
 
@@ -199,6 +204,8 @@ def get_actor(actor: str) -> str:
         else:
             return False
 
+    actor = actor.title()
+
     movies_ = movies.copy()
 
     # Aplicar la función get_actor_name a la columna 'cast' para obtener una máscara de las películas en las que el actor ha participado
@@ -208,33 +215,46 @@ def get_actor(actor: str) -> str:
     num_movies = actor_movies.shape[0]
     return_sum = round(actor_movies.sum(),ndigits=2)
     return_mean = round(actor_movies.mean(),ndigits=2)
+    return {'actor':actor, 'cantidad_filmaciones':num_movies, 'retorno_total':return_sum, 'retorno_promedio':return_mean}
 
-    return f"El actor {actor} ha participado en {num_movies} filmaciones, el mismo ha conseguido un retorno de {return_sum} con un promedio de {return_mean} por filmación"
 
 @app.get("/get_director/{director}")
-def get_director(director: str) -> list:
+def get_director(director: str) -> dict:
     """
-    Devuelve una lista de diccionarios que contiene información sobre las películas dirigidas por un director específico.
+    Devuelve un diccionario que contiene información sobre las películas dirigidas por un director específico.
 
     Parámetros:
     - director (str): El nombre del director para el cual se desea obtener la información.
 
     Retorna:
-    Una lista de diccionarios que contiene información sobre las películas dirigidas por el director.
-    Cada diccionario representa una película y contiene los siguientes campos:
-    - 'title': El título de la película.
-    - 'release_year': El año de estreno de la película.
-    - 'budget': El presupuesto de la película.
-    - 'revenue': Los ingresos generados por la película.
-    - 'return': El retorno financiero de la película.
+    Un diccionario que contiene información sobre las películas dirigidas por el director.
+    El diccionario contiene los siguientes campos:
+    - 'director': El nombre del director.
+    - 'retorno_total_director': El retorno financiero total de todas las películas dirigidas por el director.
+    - 'peliculas': Una lista de los títulos de las películas dirigidas por el director.
+    - 'anio': Una lista de los años de estreno de las películas dirigidas por el director.
+    - 'retorno_pelicula': Una lista de los retornos financieros de las películas dirigidas por el director.
+    - 'budget_pelicula': Una lista de los presupuestos de las películas dirigidas por el director.
+    - 'revenue_pelicula': Una lista de los ingresos generados por las películas dirigidas por el director.
 
     """
-    director_return = movies[movies['director'] == director].loc[:, ['title', 'release_year', 'budget', 'revenue', 'return']]
-    director_return['return'] = director_return['return'].apply(lambda x: round(x,ndigits=2))
-    return director_return.to_dict('records')
+
+    director = director.title()  # Convertir el nombre del director a título de caso
+
+    director_return = movies[movies['director'] == director].loc[:, ['director', 'title', 'release_year', 'budget', 'revenue', 'return']]
+
+    return {
+        'director': director,
+        'retorno_total_director': round(director_return['return'].sum(), 2),
+        'peliculas': director_return['title'].to_list(),
+        'anio': director_return['release_year'].to_list(),
+        'retorno_pelicula': director_return['return'].to_list(),
+        'budget_pelicula': director_return['budget'].to_list(),
+        'revenue_pelicula': director_return['revenue'].to_list()
+    }
 
 @app.get("/recomendacion/{title}")
-def recomendacion(title: str) -> list:
+def recomendacion(title: str) -> dict:
     """
     Devuelve una lista de recomendaciones relacionadas con una película específica.
 
@@ -242,7 +262,10 @@ def recomendacion(title: str) -> list:
     - title (str): El título de la película para la cual se desean obtener las recomendaciones.
 
     Retorna:
-    Una lista que contiene las recomendaciones relacionadas con la película especificada.
+    Un diccionario que contiene las recomendaciones relacionadas con la película especificada.
 
     """
-    return recommendations[recommendations['title'] == title].iloc[0, 1:].to_list()
+
+    title = title.title()
+
+    return {'Lista Recomendada':recommendations[recommendations['title'] == title].iloc[0, 1:].to_list()}
