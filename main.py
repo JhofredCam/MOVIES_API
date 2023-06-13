@@ -7,6 +7,7 @@ import ast
 app = FastAPI()
 
 movies = pd.read_csv("movies.csv")
+recommendations = pd.read_csv('recommendations.csv')
 
 @app.get("/cantidad_filmaciones_mes/{month}")
 def cantidad_filmaciones_mes(month:str) -> str:
@@ -231,3 +232,17 @@ def get_director(director: str) -> list:
     director_return = movies[movies['director'] == director].loc[:, ['title', 'release_year', 'budget', 'revenue', 'return']]
     director_return['return'] = director_return['return'].apply(lambda x: round(x,ndigits=2))
     return director_return.to_dict('records')
+
+@app.get("/recomendacion/{title}")
+def recomendacion(title: str) -> list:
+    """
+    Devuelve una lista de recomendaciones relacionadas con una película específica.
+
+    Parámetros:
+    - title (str): El título de la película para la cual se desean obtener las recomendaciones.
+
+    Retorna:
+    Una lista que contiene las recomendaciones relacionadas con la película especificada.
+
+    """
+    return recommendations[recommendations['title'] == title].iloc[0, 1:].to_list()
